@@ -49,8 +49,9 @@ public class OpiWidget {
 			new OpiColor(widgetContext, "background_color", r.getBgColor(), r);
 		if (r.getAttribute("fgAlarm").isExistInEDL()){
 				new OpiBoolean(widgetContext, "forecolor_alarm_sensitive", r.isFgAlarm());
-				new OpiColor(widgetContext, "foreground_color", 
-						r.isFgAlarm()? new EdmColor("OK", 0, 255, 0):r.getFgColor(), r);
+				// Don't overwrite foreground colour.  This is a temporary fix.
+//				new OpiColor(widgetContext, "foreground_color", 
+//						r.isFgAlarm()? new EdmColor("OK", 0, 255, 0):r.getFgColor(), r);
 		}
 		if (r.getAttribute("bgAlarm").isExistInEDL()){
 				new OpiBoolean(widgetContext, "backcolor_alarm_sensitive", r.isBgAlarm());
