@@ -7,6 +7,7 @@ package org.csstudio.opibuilder.converter.model;
 public class Edm_activeXTextDspClass extends Edm_activeXTextDspClass_noedit {
 	
 	@EdmAttributeAn @EdmOptionalAn private boolean editable;
+	@EdmAttributeAn @EdmOptionalAn private boolean useDisplayBg;
 	@EdmAttributeAn @EdmOptionalAn private boolean date;
 	@EdmAttributeAn @EdmOptionalAn private boolean file;
 	@EdmAttributeAn @EdmOptionalAn private String defDir;
@@ -37,6 +38,9 @@ public class Edm_activeXTextDspClass extends Edm_activeXTextDspClass_noedit {
 		return file;
 	}
 
+	public boolean isTransparent() {
+		return useDisplayBg;
+	}
 
 
 	public String getDefDir() {
