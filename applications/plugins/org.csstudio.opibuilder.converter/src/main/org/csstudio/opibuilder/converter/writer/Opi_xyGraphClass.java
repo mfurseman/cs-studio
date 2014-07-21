@@ -44,12 +44,23 @@ public class Opi_xyGraphClass extends OpiWidget {
 		// Title
 		if (r.getGraphTitle() != null)
 			new OpiString(widgetContext, "title", r.getGraphTitle());
-		if (r.getXLabel() != null)
+		// There's no way to turn off axis labels, so if we don't want one,
+		// set it to ""
+		if (r.getXLabel() != null) {
 			new OpiString(widgetContext, "axis_0_axis_title", r.getXLabel());
-		if (r.getYLabel() != null)
+		} else {
+			new OpiString(widgetContext, "axis_0_axis_title", "");
+		}
+		if (r.getYLabel() != null) {
 			new OpiString(widgetContext, "axis_1_axis_title", r.getYLabel());
-		if (r.getY2Label() != null)
+		} else {
+			new OpiString(widgetContext, "axis_1_axis_title", "");
+		}
+		if (r.getY2Label() != null) {
 			new OpiString(widgetContext, "axis_2_axis_title", r.getY2Label());
+		} else {
+			new OpiString(widgetContext, "axis_2_axis_title", "");
+		}
 
 		new OpiBoolean(widgetContext, "axis_2_left_bottom_side", false);
 
@@ -91,7 +102,8 @@ public class Opi_xyGraphClass extends OpiWidget {
 		new OpiBoolean(widgetContext, "axis_1_show_grid", r.isyShowMajorGrid());
 		new OpiBoolean(widgetContext, "axis_2_show_grid", r.isY2ShowMajorGrid());
 		
-		
+		// There is no legend on EDM xygraphs.
+		new OpiBoolean(widgetContext, "show_legend", false);
 		
 
 		new OpiInt(widgetContext, "axis_0_time_format",
@@ -124,9 +136,15 @@ public class Opi_xyGraphClass extends OpiWidget {
 		if(r.getyAxisSrc()!=null && r.getyAxisSrc().equals("AutoScale"))
 			new OpiBoolean(widgetContext, "axis_1_auto_scale",	true);
 
+
 		if(r.getY2AxisSrc()!=null && r.getY2AxisSrc().equals("AutoScale"))
 			new OpiBoolean(widgetContext, "axis_2_auto_scale",	true);
 		
+		if(r.getxAxisStyle()!=null && r.getxAxisStyle().equals("log10"))
+			new OpiBoolean(widgetContext, "axis_0_log_scale", true);
+
+		if(r.getyAxisStyle()!=null && r.getyAxisStyle().equals("log10"))
+			new OpiBoolean(widgetContext, "axis_1_log_scale", true);
 		
 		// trace properties
 		new OpiInt(widgetContext, "trace_count", r.getNumTraces()); 
