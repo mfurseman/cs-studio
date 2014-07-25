@@ -77,8 +77,10 @@ public class Opi_xyGraphClass extends OpiWidget {
 		new OpiColor(widgetContext, "axis_2_grid_color", r.getGridColor(), r);
 
 		if (r.isBorder()) {
+			// EDM xygraph borders always one pixel, black.
 			new OpiInt(widgetContext, "border_width", 1);
 			new OpiInt(widgetContext, "border_style", 1);
+			new OpiColor(widgetContext, "border_color", new EdmColor("Black", 0, 0 ,0), r);
 		} else {
 			new OpiInt(widgetContext, "border_width", 0);
 			new OpiInt(widgetContext, "border_style", 0);
@@ -105,6 +107,24 @@ public class Opi_xyGraphClass extends OpiWidget {
 		// There is no legend on EDM xygraphs.
 		new OpiBoolean(widgetContext, "show_legend", false);
 		
+		// All fonts on EDM graphs are the same
+		if (r.getFont().isExistInEDL()) {
+			if (r.getGraphTitle() != null) {
+				new OpiFont(widgetContext, "title_font", r.getFont());
+			}
+			if (r.isShowXAxis()) {
+				new OpiFont(widgetContext, "axis_0_scale_font", r.getFont());
+				new OpiFont(widgetContext, "axis_0_title_font", r.getFont());
+			}
+			if (r.isShowYAxis()) {
+				new OpiFont(widgetContext, "axis_1_scale_font", r.getFont());
+				new OpiFont(widgetContext, "axis_1_title_font", r.getFont());
+			}
+			if (r.isShowY2Axis()) {
+				new OpiFont(widgetContext, "axis_2_scale_font", r.getFont());
+				new OpiFont(widgetContext, "axis_2_title_font", r.getFont());
+			}
+		}
 
 		new OpiInt(widgetContext, "axis_0_time_format",
 				(r.getXAxisStyle() != null && (r.getXAxisStyle().equals("time"))) ? 7 : 0);
@@ -120,7 +140,7 @@ public class Opi_xyGraphClass extends OpiWidget {
 		
 		if (r.getTriggerPv() != null)
 			new OpiString(widgetContext, "trigger_pv", r.getTriggerPv());
-		
+
 
 		// axis properties
 		for (int i = 0; i < 2; i++) {
