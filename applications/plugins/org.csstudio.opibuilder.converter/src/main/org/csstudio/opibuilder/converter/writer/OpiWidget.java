@@ -108,23 +108,28 @@ public class OpiWidget {
 				StringBuilder sb = new StringBuilder("loc://");
 				sb.append(parts[0].substring(5));
 				if (parts.length > 1) {
-//					String type = "";
+					String type = "";
 					String initValue = parts[1];
 					if (parts[1].startsWith("d:")) {
-//						type = "<VDouble>";
+						type = "<VDouble>";
 						initValue = parts[1].substring(2);
 					} else if (parts[1].startsWith("i:")) {
-//						type = "<VDouble>";
+						type = "<VDouble>";
 						initValue = parts[1].substring(2);
 					} else if (parts[1].startsWith("s:")) {
-//						type = "<VString>";
+						type = "<VString>";
 						initValue = "\""+parts[1].substring(2)+"\"";
 					} else if (parts[1].startsWith("e:")) { // Enumerated pv
-															// cannot be
-															// converted.
-						return pvName;
+						type = "<VEnum>";
+						initValue = parts[1].substring(2);
+						String[] ps = initValue.split(",");
+						initValue = ps[0];
+						for (int i = 1; i < ps.length; i++) {
+							initValue += ",\"" + ps[i] + "\"";
+						}
 					}
-					//doesn't append type yet to support utility pv.
+					// re-appending type in contrast to previous comment
+					sb.append(type);
 					sb.append("(").append(initValue).append(")");
 				}
 				return sb.toString();	
