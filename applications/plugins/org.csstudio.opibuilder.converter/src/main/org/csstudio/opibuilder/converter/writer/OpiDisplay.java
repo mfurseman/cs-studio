@@ -57,6 +57,9 @@ public class OpiDisplay {
 		new OpiColor(context, "foreground_color", d.getFgColor(), null);
 		new OpiColor(context, "background_color", d.getBgColor(), null);
 		
+		// Hard-coded for now.
+		new OpiString(context, "boy_version", "3.2.17");
+		
 		if (d.getAttribute("title").isExistInEDL())
 			new OpiString(context, "name", d.getTitle());
 		new OpiBoolean(context, "show_grid", d.isShowGrid());
