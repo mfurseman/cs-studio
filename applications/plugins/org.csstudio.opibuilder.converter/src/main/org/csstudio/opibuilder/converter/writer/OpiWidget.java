@@ -10,12 +10,10 @@ package org.csstudio.opibuilder.converter.writer;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 
-import org.csstudio.java.string.StringSplitter;
 import org.csstudio.opibuilder.converter.model.EdmAttribute;
 import org.csstudio.opibuilder.converter.model.EdmColor;
 import org.csstudio.opibuilder.converter.model.EdmWidget;
 import org.w3c.dom.Element;
-
 /**
  * General class for outputting widgets.
  * 
@@ -75,6 +73,10 @@ public class OpiWidget {
 		}
 
 	}
+	
+	public static String convertPVName(String pvName) {
+		return PVNameConversion.convertPVName(pvName);
+	}
 
 	/**
 	 * Sets the attribute typeId of the OPI widget with
@@ -99,48 +101,6 @@ public class OpiWidget {
 		new OpiBoolean(widgetContext, "border_alarm_sensitive", false);
 	}
 	
-	public static String convertPVName(final String pvName){
-		if(pvName.startsWith("LOC\\")){
-			try {
-				String newName = pvName.replace("$(!W)", "$(DID)");
-				newName = newName.replaceAll("\\x24\\x28\\x21[A-Z]{1}\\x29", "\\$(DID)");
-				String[] parts = StringSplitter.splitIgnoreInQuotes(newName, '=', true);
-				StringBuilder sb = new StringBuilder("loc://");
-				sb.append(parts[0].substring(5));
-				if (parts.length > 1) {
-					String type = "";
-					String initValue = parts[1];
-					if (parts[1].startsWith("d:")) {
-						type = "<VDouble>";
-						initValue = parts[1].substring(2);
-					} else if (parts[1].startsWith("i:")) {
-						type = "<VDouble>";
-						initValue = parts[1].substring(2);
-					} else if (parts[1].startsWith("s:")) {
-						type = "<VString>";
-						initValue = "\""+parts[1].substring(2)+"\"";
-					} else if (parts[1].startsWith("e:")) { // Enumerated pv
-						type = "<VEnum>";
-						initValue = parts[1].substring(2);
-						String[] ps = initValue.split(",");
-						initValue = ps[0];
-						for (int i = 1; i < ps.length; i++) {
-							initValue += ",\"" + ps[i] + "\"";
-						}
-					}
-					// re-appending type in contrast to previous comment
-					sb.append(type);
-					sb.append("(").append(initValue).append(")");
-				}
-				return sb.toString();	
-				
-			} catch (Exception e) {
-				return pvName;
-			}
-		}
-		
-		return pvName;
-	}
 	
 	public static  String convertFileExtention(String originPath) {
 		if (originPath.endsWith(".edl")) {
