@@ -8,6 +8,7 @@
 package org.csstudio.opibuilder.converter.writer;
 
 import org.apache.log4j.Logger;
+import org.csstudio.opibuilder.converter.model.EdmColor;
 import org.csstudio.opibuilder.converter.model.Edm_activeXTextDspClass;
 
 /**
@@ -42,7 +43,7 @@ public class Opi_activeXTextDspClass extends Opi_activeXTextDspClass_noedit {
 			}
 		}
 		
-
+		
 		log.debug("Edm_activeXTextDspClass written.");
 
 	}

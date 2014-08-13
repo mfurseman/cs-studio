@@ -13,8 +13,6 @@ public class Edm_activeXTextDspClass extends Edm_activeXTextDspClass_noedit {
 	@EdmAttributeAn @EdmOptionalAn private String fileComponent;
 	
 	
-	
-	
 	public Edm_activeXTextDspClass(EdmEntity genericEntity) throws EdmException {
 		super(genericEntity);
 	}
@@ -36,7 +34,6 @@ public class Edm_activeXTextDspClass extends Edm_activeXTextDspClass_noedit {
 	public boolean isFile() {
 		return file;
 	}
-
 
 
 	public String getDefDir() {
