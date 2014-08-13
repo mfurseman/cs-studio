@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2010-2013 ITER Organization.
+* Copyright (c) 2010-2014 ITER Organization.
 * All rights reserved. This program and the accompanying materials
 * are made available under the terms of the Eclipse Public License v1.0
 * which accompanies this distribution, and is available at
@@ -7,17 +7,28 @@
 ******************************************************************************/
 package org.csstudio.opibuilder.widgets.symbol.bool;
 
+import java.util.List;
+
+import org.csstudio.opibuilder.editparts.AlarmSeverityListener;
 import org.csstudio.opibuilder.editparts.ExecutionMode;
 import org.csstudio.opibuilder.model.AbstractPVWidgetModel;
 import org.csstudio.opibuilder.properties.IWidgetPropertyChangeHandler;
 import org.csstudio.opibuilder.widgets.editparts.AbstractBoolControlEditPart;
-import org.csstudio.opibuilder.widgets.symbol.util.PermutationMatrix;
-import org.csstudio.opibuilder.widgets.symbol.util.SymbolImageProperties;
+import org.csstudio.opibuilder.widgets.symbol.Preferences;
+import org.csstudio.simplepv.IPV;
+import org.csstudio.simplepv.IPVListener;
 import org.csstudio.swt.widgets.datadefinition.IManualValueChangeListener;
+import org.csstudio.swt.widgets.symbol.SymbolImageProperties;
+import org.csstudio.swt.widgets.symbol.util.IImageListener;
+import org.csstudio.swt.widgets.symbol.util.PermutationMatrix;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.draw2d.IFigure;
 import org.eclipse.draw2d.geometry.Dimension;
+import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.widgets.Display;
+import org.epics.vtype.AlarmSeverity;
+import org.epics.vtype.VEnum;
+import org.epics.vtype.VType;
 
 /**
  * Edit part Controller for a Control Boolean Symbol Image widget based on
@@ -27,6 +38,9 @@ import org.eclipse.swt.widgets.Display;
  * 
  */
 public class ControlBoolSymbolEditpart extends AbstractBoolControlEditPart {
+
+	private IPVListener loadItemsFromPVListener;
+	private List<String> meta = null;
 
 	private int maxAttempts;
 
@@ -50,9 +64,7 @@ public class ControlBoolSymbolEditpart extends AbstractBoolControlEditPart {
 	public void initializeCommonFigureProperties(
 			final ControlBoolSymbolFigure figure, ControlBoolSymbolModel model) {
 		super.initializeCommonFigureProperties(figure, model);
-		
 		figure.setExecutionMode(getExecutionMode());
-		figure.setSymbolImagePath(model, model.getSymbolImagePath());
 
 		// Image default parameters
 		SymbolImageProperties sip = new SymbolImageProperties();
@@ -62,20 +74,84 @@ public class ControlBoolSymbolEditpart extends AbstractBoolControlEditPart {
 		sip.setRightCrop(model.getRightCrop());
 		sip.setStretch(model.getStretch());
 		sip.setAutoSize(model.isAutoSize());
-		sip.setDegree(model.getDegree());
-		sip.setFlipH(model.isFlipHorizontal());
-		sip.setFlipV(model.isFlipVertical());
 		sip.setMatrix(model.getPermutationMatrix());
+		sip.setAlignedToNearestSecond(model.isAlignedToNearestSecond());
+		sip.setBackgroundColor(new Color(Display.getDefault(), model.getBackgroundColor()));
+		sip.setColorToChange(new Color(Display.getDefault(), Preferences.getColorToChange()));
 		figure.setSymbolProperties(sip);
-		
+
+		// Resize when new image is loaded
+		figure.setImageLoadedListener(new IImageListener() {
+
+			@Override
+			public void imageResized(final IFigure figure) {
+				ControlBoolSymbolFigure symbolFigure = (ControlBoolSymbolFigure) figure;
+				autoSizeWidget(symbolFigure);
+			}
+		});
+
+		if (model.getPVName() == null || model.getPVName().isEmpty())
+			figure.setUseForegroundColor(true);
+
+		figure.setAnimationDisabled(model.isStopAnimation());
+		figure.setSymbolImagePath(model, model.getSymbolImagePath());
+
 		figure.addManualValueChangeListener(new IManualValueChangeListener() {
 			public void manualValueChanged(double newValue) {
 				if (getExecutionMode() == ExecutionMode.RUN_MODE) {
-					autoSizeWidget(figure);
+					// autoSizeWidget(figure);
 				}
 			}
 		});
 	}
+
+	@Override
+	public void doActivate() {
+		super.doActivate();
+		registerLoadItemsListener();
+	}
+
+	@Override
+	public void deactivate() {
+		super.deactivate();
+		((ControlBoolSymbolFigure) getFigure()).dispose();
+		IPV pv = getPV(AbstractPVWidgetModel.PROP_PVNAME);
+		if (pv != null && loadItemsFromPVListener != null) {
+			pv.removeListener(loadItemsFromPVListener);
+		}
+	}
+
+	// -----------------------------------------------------------------
+	// PV properties handlers
+	// -----------------------------------------------------------------
+
+	private void registerLoadItemsListener() {
+		// load items from PV
+		if (getExecutionMode() == ExecutionMode.RUN_MODE) {
+			IPV pv = getPV(AbstractPVWidgetModel.PROP_PVNAME);
+			if (pv != null) {
+				if (loadItemsFromPVListener == null)
+					loadItemsFromPVListener = new IPVListener.Stub() {
+						public void valueChanged(IPV pv) {
+							VType value = pv.getValue();
+							if (value != null && value instanceof VEnum) {
+								List<String> new_meta = ((VEnum) value).getLabels();
+								if (meta == null || !meta.equals(new_meta)) {
+									meta = new_meta;
+									((ControlBoolSymbolFigure) getFigure())
+											.updateImagesPathFromMeta(meta);
+								}
+							}
+						}
+					};
+				pv.addListener(loadItemsFromPVListener);
+			}
+		}
+	}
+
+	// -----------------------------------------------------------------
+	// Image properties handlers
+	// -----------------------------------------------------------------
 
 	/**
 	 * Registers symbol image property change handlers for the properties
@@ -89,12 +165,40 @@ public class ControlBoolSymbolEditpart extends AbstractBoolControlEditPart {
 				ControlBoolSymbolFigure imageFigure = (ControlBoolSymbolFigure) figure;
 				IPath newImagePath = (IPath) newValue;
 				imageFigure.setSymbolImagePath(getWidgetModel(), newImagePath);
-				autoSizeWidget(imageFigure);
+				// autoSizeWidget(imageFigure);
 				return true;
 			}
 		};
-		setPropertyChangeHandler(ControlBoolSymbolModel.PROP_SYMBOL_IMAGE_FILE,
-				handler);
+		setPropertyChangeHandler(ControlBoolSymbolModel.PROP_SYMBOL_IMAGE_FILE, handler);
+
+		// PV Name ForeColor color rule
+		handler = new IWidgetPropertyChangeHandler() {
+			public boolean handleChange(Object oldValue, Object newValue,
+					IFigure figure) {
+				if (newValue == null || ((String) newValue).isEmpty())
+					((ControlBoolSymbolFigure) figure).setUseForegroundColor(true);
+				else ((ControlBoolSymbolFigure) figure).setUseForegroundColor(false);
+				return true;
+			}
+		};
+		setPropertyChangeHandler(AbstractPVWidgetModel.PROP_PVNAME, handler);
+
+		// ForeColor Alarm Sensitive
+		getPVWidgetEditpartDelegate().addAlarmSeverityListener(new AlarmSeverityListener() {
+			@Override
+			public boolean severityChanged(AlarmSeverity severity,
+					IFigure refreshableFigure) {
+				ControlBoolSymbolFigure figure = (ControlBoolSymbolFigure) refreshableFigure;
+				if (!getWidgetModel().isForeColorAlarmSensitve()) {
+					figure.setUseForegroundColor(false);
+				} else {
+					if (severity.equals(AlarmSeverity.NONE))
+						figure.setUseForegroundColor(false);
+					else figure.setUseForegroundColor(true);
+				}
+				return true;
+			}
+		});
 	}
 
 	/**
@@ -117,6 +221,28 @@ public class ControlBoolSymbolEditpart extends AbstractBoolControlEditPart {
 			}
 		};
 		setPropertyChangeHandler(ControlBoolSymbolModel.PROP_AUTOSIZE, handler);
+
+		// changes to the stop animation property
+		handler = new IWidgetPropertyChangeHandler() {
+			public boolean handleChange(final Object oldValue,
+					final Object newValue, final IFigure figure) {
+				ControlBoolSymbolFigure imageFigure = (ControlBoolSymbolFigure) figure;
+				imageFigure.setAnimationDisabled((Boolean) newValue);
+				return false;
+			}
+		};
+		setPropertyChangeHandler(ControlBoolSymbolModel.PROP_NO_ANIMATION, handler);
+
+		// changes to the align to nearest second property
+		handler = new IWidgetPropertyChangeHandler() {
+			public boolean handleChange(final Object oldValue,
+					final Object newValue, final IFigure figure) {
+				ControlBoolSymbolFigure imageFigure = (ControlBoolSymbolFigure) figure;
+				imageFigure.setAlignedToNearestSecond((Boolean) newValue);
+				return false;
+			}
+		};
+		setPropertyChangeHandler(ControlBoolSymbolModel.PROP_ALIGN_TO_NEAREST_SECOND, handler);
 
 		// image size (height/width) property
 		handler = new IWidgetPropertyChangeHandler() {
@@ -146,10 +272,8 @@ public class ControlBoolSymbolEditpart extends AbstractBoolControlEditPart {
 				return false;
 			}
 		};
-		setPropertyChangeHandler(ControlBoolSymbolModel.PROP_BORDER_WIDTH,
-				handler);
-		setPropertyChangeHandler(ControlBoolSymbolModel.PROP_BORDER_STYLE,
-				handler);
+		setPropertyChangeHandler(ControlBoolSymbolModel.PROP_BORDER_WIDTH, handler);
+		setPropertyChangeHandler(ControlBoolSymbolModel.PROP_BORDER_STYLE, handler);
 	}
 
 	/**
@@ -162,7 +286,7 @@ public class ControlBoolSymbolEditpart extends AbstractBoolControlEditPart {
 					final Object newValue, final IFigure figure) {
 				ControlBoolSymbolFigure imageFigure = (ControlBoolSymbolFigure) figure;
 				imageFigure.setStretch((Boolean) newValue);
-				autoSizeWidget(imageFigure);
+				// autoSizeWidget(imageFigure);
 				return false;
 			}
 		};
@@ -189,18 +313,9 @@ public class ControlBoolSymbolEditpart extends AbstractBoolControlEditPart {
 				PermutationMatrix result = newMatrix.multiply(oldMatrix);
 				setPropertyValue(ControlBoolSymbolModel.PERMUTATION_MATRIX, result.getMatrix());
 
-//				if (newDegree != 0 && newDegree != 90 && newDegree != 180
-//						&& newDegree != 270) { // Reset with previous value
-//					setPropertyValue(ControlBoolSymbolModel.PROP_DEGREE, oldValue);
-//					Activator.getLogger().log(Level.WARNING,
-//									"ERROR in value of old degree " + oldDegree
-//									+ ". The degree can only be 0, 90, 180 or 270");
-//				} else {
-					setPropertyValue(ControlBoolSymbolModel.PROP_DEGREE, newDegree);
-					// imageFigure.setDegree(newDegree);
-					imageFigure.setPermutationMatrix(result);
-					autoSizeWidget(imageFigure);
-//				}
+				setPropertyValue(ControlBoolSymbolModel.PROP_DEGREE, newDegree);
+				imageFigure.setPermutationMatrix(result);
+				// autoSizeWidget(imageFigure);
 				return false;
 			}
 		};
@@ -211,7 +326,6 @@ public class ControlBoolSymbolEditpart extends AbstractBoolControlEditPart {
 			public boolean handleChange(final Object oldValue,
 					final Object newValue, final IFigure figure) {
 				ControlBoolSymbolFigure imageFigure = (ControlBoolSymbolFigure) figure;
-				// imageFigure.setFlipH((Boolean) newValue);
 				PermutationMatrix newMatrix = PermutationMatrix.generateFlipHMatrix();
 				PermutationMatrix oldMatrix = imageFigure.getPermutationMatrix();
 				PermutationMatrix result = newMatrix.multiply(oldMatrix);
@@ -219,7 +333,7 @@ public class ControlBoolSymbolEditpart extends AbstractBoolControlEditPart {
 				setPropertyValue(ControlBoolSymbolModel.PROP_FLIP_HORIZONTAL, (Boolean) newValue);
 				setPropertyValue(ControlBoolSymbolModel.PERMUTATION_MATRIX, result.getMatrix());
 				imageFigure.setPermutationMatrix(result);
-				autoSizeWidget(imageFigure);
+				// autoSizeWidget(imageFigure);
 				return false;
 			}
 		};
@@ -230,7 +344,6 @@ public class ControlBoolSymbolEditpart extends AbstractBoolControlEditPart {
 			public boolean handleChange(final Object oldValue,
 					final Object newValue, final IFigure figure) {
 				ControlBoolSymbolFigure imageFigure = (ControlBoolSymbolFigure) figure;
-				// imageFigure.setFlipV((Boolean) newValue);
 				PermutationMatrix newMatrix = PermutationMatrix.generateFlipVMatrix();
 				PermutationMatrix oldMatrix = imageFigure.getPermutationMatrix();
 				PermutationMatrix result = newMatrix.multiply(oldMatrix);
@@ -238,7 +351,7 @@ public class ControlBoolSymbolEditpart extends AbstractBoolControlEditPart {
 				setPropertyValue(ControlBoolSymbolModel.PROP_FLIP_VERTICAL, (Boolean) newValue);
 				setPropertyValue(ControlBoolSymbolModel.PERMUTATION_MATRIX, result.getMatrix());
 				imageFigure.setPermutationMatrix(result);
-				autoSizeWidget(imageFigure);
+				// autoSizeWidget(imageFigure);
 				return false;
 			}
 		};
@@ -259,7 +372,7 @@ public class ControlBoolSymbolEditpart extends AbstractBoolControlEditPart {
 				}
 				ControlBoolSymbolFigure imageFigure = (ControlBoolSymbolFigure) figure;
 				imageFigure.setTopCrop((Integer) newValue);
-				autoSizeWidget(imageFigure);
+				// autoSizeWidget(imageFigure);
 				return false;
 			}
 		};
@@ -271,12 +384,11 @@ public class ControlBoolSymbolEditpart extends AbstractBoolControlEditPart {
 					final Object newValue, final IFigure figure) {
 				ControlBoolSymbolFigure imageFigure = (ControlBoolSymbolFigure) figure;
 				imageFigure.setBottomCrop((Integer) newValue);
-				autoSizeWidget(imageFigure);
+				// autoSizeWidget(imageFigure);
 				return false;
 			}
 		};
-		setPropertyChangeHandler(ControlBoolSymbolModel.PROP_BOTTOMCROP,
-				handler);
+		setPropertyChangeHandler(ControlBoolSymbolModel.PROP_BOTTOMCROP, handler);
 
 		// left crop property
 		handler = new IWidgetPropertyChangeHandler() {
@@ -284,7 +396,7 @@ public class ControlBoolSymbolEditpart extends AbstractBoolControlEditPart {
 					final Object newValue, final IFigure figure) {
 				ControlBoolSymbolFigure imageFigure = (ControlBoolSymbolFigure) figure;
 				imageFigure.setLeftCrop((Integer) newValue);
-				autoSizeWidget(imageFigure);
+				// autoSizeWidget(imageFigure);
 				return false;
 			}
 		};
@@ -296,30 +408,11 @@ public class ControlBoolSymbolEditpart extends AbstractBoolControlEditPart {
 					final Object newValue, final IFigure figure) {
 				ControlBoolSymbolFigure imageFigure = (ControlBoolSymbolFigure) figure;
 				imageFigure.setRightCrop((Integer) newValue);
-				autoSizeWidget(imageFigure);
+				// autoSizeWidget(imageFigure);
 				return false;
 			}
 		};
 		setPropertyChangeHandler(ControlBoolSymbolModel.PROP_RIGHTCROP, handler);
-	}
-
-	/**
-	 * Registers PV value property change handlers for the properties defined in
-	 * {@link ControlBoolSymbolModel}.
-	 */
-	public void registerPVValuePropertyChangeHandlers() {
-		IWidgetPropertyChangeHandler handler = new IWidgetPropertyChangeHandler() {
-			public boolean handleChange(final Object oldValue,
-					final Object newValue, final IFigure refreshableFigure) {
-				if (newValue == null) {
-					return false;
-				}
-				ControlBoolSymbolFigure figure = (ControlBoolSymbolFigure) refreshableFigure;
-				autoSizeWidget(figure);
-				return true;
-			}
-		};
-		setPropertyChangeHandler(AbstractPVWidgetModel.PROP_PVVALUE, handler);
 	}
 
 	@Override
@@ -331,7 +424,6 @@ public class ControlBoolSymbolEditpart extends AbstractBoolControlEditPart {
 		registerImageRotationPropertyHandlers();
 		registerImageBorderPropertyHandlers();
 		registerImageCropPropertyHandlers();
-		registerPVValuePropertyChangeHandlers();
 	}
 
 	/**
@@ -342,12 +434,6 @@ public class ControlBoolSymbolEditpart extends AbstractBoolControlEditPart {
 	@Override
 	public ControlBoolSymbolModel getWidgetModel() {
 		return (ControlBoolSymbolModel) super.getWidgetModel();
-	}
-
-	@Override
-	public void deactivate() {
-		super.deactivate();
-		((ControlBoolSymbolFigure) getFigure()).dispose();
 	}
 
 	public void autoSizeWidget(final ControlBoolSymbolFigure imageFigure) {

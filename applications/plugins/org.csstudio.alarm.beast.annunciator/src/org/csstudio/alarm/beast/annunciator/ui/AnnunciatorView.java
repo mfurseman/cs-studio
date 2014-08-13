@@ -17,6 +17,7 @@ import org.csstudio.alarm.beast.annunciator.model.JMSAnnunciator;
 import org.csstudio.alarm.beast.annunciator.model.JMSAnnunciatorListener;
 import org.csstudio.alarm.beast.annunciator.model.Severity;
 import org.csstudio.apputil.ringbuffer.RingBuffer;
+import org.csstudio.utility.speech.NoSoundCardAvailableException;
 import org.eclipse.jface.action.IToolBarManager;
 import org.eclipse.jface.layout.TableColumnLayout;
 import org.eclipse.jface.viewers.CellLabelProvider;
@@ -46,6 +47,8 @@ public class AnnunciatorView extends ViewPart implements JMSAnnunciatorListener
 
     /** Table of recent annunciations */
     private TableViewer message_table;
+    
+    private SilenceAction silenceAction;
 
     /** List of recent annunciations, shown in message_table.
      *  Synchronize on access
@@ -62,14 +65,19 @@ public class AnnunciatorView extends ViewPart implements JMSAnnunciatorListener
     public void createPartControl(final Composite parent)
     {
         // TODO Better handling of the JMSAnnunciator start/stop?
-        // On OS X, closing the AnnunciatorView will just hide & deactivate
-        // the view, just as if it's 'hidden' behind another view.
-        // When the opening the view again, that just re-activates the
-        // existing view.
+        // When restarting CSS, the Annunciator View could
+        // be 'hidden' behind other tabs.
+        // Such a hidden view is nothing but a title in the tab.
+        // The View is not really created, hence no annunciator is
+        // running
+        // -> Must always keep the annunciator view visible!
+        // 
+        // When closing the AnnunciatorView while it is still part of
+        // another currently loaded perspective, the annunciator will just hide
+        // to allow quick re-open in this view or when switching to one
+        // of the other perspectives which had the annuniator open.
         // To the user that means: Annunciations continue even after closing
         // the view.
-        // On Linux, the view seems to really close when the visible view
-        // is closed.
         // Tried IPartListener2, but no good solution at this point.
 //        final IPartService service =
 //            (IPartService) getSite().getService(IPartService.class);
@@ -77,13 +85,6 @@ public class AnnunciatorView extends ViewPart implements JMSAnnunciatorListener
 //        {
 // ...
 //        });
-        //
-        // Related: When restarting CSS, the Annunciator View could
-        // be 'hidden' behind other tabs.
-        // Such a hidden view is nothing but a title in the tab.
-        // The View is not really created, hence no annunciator is
-        // running
-        // -> Must always keep the annunciator view visible!
 
         createGUI(parent);
 
@@ -206,7 +207,8 @@ public class AnnunciatorView extends ViewPart implements JMSAnnunciatorListener
     /** @param toolbar Tool bar to which to add */
     private void addToolbarActions(final IToolBarManager toolbar)
     {
-        toolbar.add(new SilenceAction(this));
+    	silenceAction = new SilenceAction(this);
+        toolbar.add(silenceAction);
         toolbar.add(new ClearAction(this));
     }
 
@@ -259,6 +261,23 @@ public class AnnunciatorView extends ViewPart implements JMSAnnunciatorListener
     @Override
     public void annunciatorError(final Throwable ex)
     {
+    	if(NoSoundCardAvailableException.class.equals(ex.getClass())) {
+            // Update table in UI thread
+            final Control control = message_table.getControl();
+            if (control.isDisposed())
+                return;
+			control.getDisplay().asyncExec(new Runnable() {
+				@Override
+				public void run() {
+	                if (control.isDisposed())
+	                    return;
+	                silenceAction.setEnabled(false);
+	                setAnnunciationsEnabled(false);
+				}
+			});
+	        logAnnunciation(new AnnunciationMessage(Severity.forError(), ex.getMessage()));
+    		return;
+    	}
         logAnnunciation(new AnnunciationMessage(Severity.forError(), ex.getMessage()));
         Activator.getLogger().log(Level.WARNING, "Annunciator Error", ex); //$NON-NLS-1$
     }

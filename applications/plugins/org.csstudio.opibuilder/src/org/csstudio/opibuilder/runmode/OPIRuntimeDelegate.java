@@ -1,8 +1,8 @@
 package org.csstudio.opibuilder.runmode;
 
 import java.io.InputStream;
-import java.util.Date;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
@@ -19,12 +19,14 @@ import org.csstudio.opibuilder.util.MacrosInput;
 import org.csstudio.opibuilder.util.ResourceUtil;
 import org.csstudio.opibuilder.util.SingleSourceHelper;
 import org.csstudio.ui.util.CustomMediaFactory;
+import org.csstudio.utility.singlesource.SingleSourcePlugin;
 import org.eclipse.core.runtime.IAdaptable;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
+import org.eclipse.draw2d.ConnectionLayer;
 import org.eclipse.draw2d.UpdateListener;
 import org.eclipse.draw2d.UpdateManager;
 import org.eclipse.draw2d.geometry.Rectangle;
@@ -32,6 +34,7 @@ import org.eclipse.gef.ContextMenuProvider;
 import org.eclipse.gef.DragTracker;
 import org.eclipse.gef.EditDomain;
 import org.eclipse.gef.GraphicalViewer;
+import org.eclipse.gef.LayerConstants;
 import org.eclipse.gef.MouseWheelHandler;
 import org.eclipse.gef.MouseWheelZoomHandler;
 import org.eclipse.gef.Request;
@@ -42,18 +45,13 @@ import org.eclipse.gef.tools.DragEditPartsTracker;
 import org.eclipse.gef.ui.actions.ActionRegistry;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.custom.CTabFolder;
 import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.events.PaintListener;
 import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IWorkbenchPartSite;
 import org.eclipse.ui.PartInitException;
-import org.eclipse.ui.internal.PartPane;
-import org.eclipse.ui.internal.PartSite;
-import org.eclipse.ui.internal.PartStack;
 
 /**
  * The delegate to run an OPI in an editor or view.
@@ -120,6 +118,7 @@ public class OPIRuntimeDelegate implements IAdaptable{
 			SingleSourceHelper.removePaintListener(viewer.getControl(),errorMessagePaintListener);
 		}
 		displayModel = new DisplayModel(getOPIFilePath());
+		displayModel.setOpiRuntime(opiRuntime);
 		displayModel.setDisplayID(displayID);
 		displayModelFilled = false;
 		InputStream inputStream = null;
@@ -177,7 +176,10 @@ public class OPIRuntimeDelegate implements IAdaptable{
 	
 	public void createGUI(Composite parent) {
 		viewer = new PatchedScrollingGraphicalViewer();
-
+		if(displayModel!=null){
+			displayModel.setOpiRuntime(opiRuntime);
+			displayModel.setViewer(viewer);
+		}
 		ScalableFreeformRootEditPart root = new PatchedScalableFreeformRootEditPart() {
 
 			// In Run mode, clicking the Display or container should de-select
@@ -191,8 +193,15 @@ public class OPIRuntimeDelegate implements IAdaptable{
 			public boolean isSelectable() {
 				return false;
 			}
-		};
-		viewer.createControl(parent);
+		};		
+		// set clipping strategy for connection layer of connection can be hide
+		// when its source or target is not showing.
+		ConnectionLayer connectionLayer = (ConnectionLayer) root
+				.getLayer(LayerConstants.CONNECTION_LAYER);
+		connectionLayer.setClippingStrategy(new PatchedConnectionLayerClippingStrategy(
+				connectionLayer));
+
+	viewer.createControl(parent);
 		viewer.setRootEditPart(root);
 		viewer.setEditPartFactory(new WidgetEditPartFactory(
 				ExecutionMode.RUN_MODE));
@@ -318,23 +327,12 @@ public class OPIRuntimeDelegate implements IAdaptable{
 	private void hideCloseButton(final IWorkbenchPartSite site) {
 		if (!displayModel.isShowCloseButton()) {
 			Display.getCurrent().asyncExec(new Runnable() {
-
 				public void run() {
-					
-					PartPane currentEditorPartPane = ((PartSite) site)
-							.getPane();
-					PartStack stack = currentEditorPartPane.getStack();
-					Control control = stack.getControl();
-					if (control instanceof CTabFolder) {
-						CTabFolder tabFolder = (CTabFolder) control;
-						tabFolder.getSelection().setShowClose(false);
-					}
+					SingleSourcePlugin.getUIHelper().enableClose(site, false);
 				}
 			});
 		}
 	}
-	
-	
 	
 	public void setEditorInput(IEditorInput editorInput) {
 		this.editorInput = editorInput;
@@ -435,12 +433,12 @@ public class OPIRuntimeDelegate implements IAdaptable{
 										}													
 										XMLUtil.fillDisplayModelFromInputStream(
 												stream, displayModel);	
+										displayModel.setOpiRuntime(opiRuntime);
 										displayModelFilled = true;
 										addRunnerInputMacros(input);													
 										if(viewer != null){
 											viewer.setContents(displayModel);
-											displayModel.setViewer(viewer);
-											displayModel.setOpiRuntime(opiRuntime);
+											displayModel.setViewer(viewer);											
 										}
 										updateEditorTitle();
 										hideCloseButton(site);

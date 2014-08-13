@@ -67,7 +67,7 @@
      -->
    <extension point="org.csstudio.startup.module">
       <startupParameters class="org.csstudio.utility.product.StartupParameters"/>
-      <workspace class="org.csstudio.sns.startuphelper.WorkspacePrompt"/>
+      <workspace class="org.csstudio.utility.product.WorkspacePrompt"/>
       <workbench class="org.csstudio.utility.product.Workbench"/>
       <project class="org.csstudio.startup.module.defaults.DefaultProject"/>
    </extension>
@@ -99,6 +99,16 @@
             content="doc/whatsnew.xml"
             configId="org.eclipse.ui.intro.universalConfig">
       </configExtension>
+   </extension>
+   <extension
+         point="org.eclipse.ui.menus">
+      <menuContribution
+            allPopups="true"
+            locationURI="toolbar:org.eclipse.ui.main.toolbar?after=file">
+         <toolbar
+               id="additions">
+         </toolbar>
+      </menuContribution>
    </extension>
    
 

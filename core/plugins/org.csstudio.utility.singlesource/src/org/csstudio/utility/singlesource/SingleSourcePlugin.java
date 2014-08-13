@@ -9,6 +9,7 @@ package org.csstudio.utility.singlesource;
 
 import java.util.logging.Logger;
 
+import org.csstudio.utility.singlesource.UIHelper.UI;
 import org.eclipse.core.runtime.IConfigurationElement;
 import org.eclipse.core.runtime.IExtensionRegistry;
 import org.eclipse.core.runtime.RegistryFactory;
@@ -72,4 +73,10 @@ public class SingleSourcePlugin implements BundleActivator
     {
         return SingleSourcePlugin.ui;
     }
+    
+	/** @return <code>true</code> if this is running in RAP */
+	public static boolean isRAP()
+	{
+		return SingleSourcePlugin.ui.getUI() == UI.RAP;
+	}
 }

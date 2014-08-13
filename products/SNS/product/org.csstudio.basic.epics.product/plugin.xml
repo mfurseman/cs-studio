@@ -20,14 +20,14 @@
             class="org.csstudio.utility.product.StartupParameters">
       </startupParameters>
       <workspace
-            class="org.csstudio.sns.startuphelper.WorkspacePrompt">
+            class="org.csstudio.utility.product.WorkspacePrompt">
       </workspace>
-      <project
-            class="org.csstudio.startup.module.defaults.DefaultProject">
-      </project>
       <workbench
             class="org.csstudio.utility.product.Workbench">
       </workbench>
+      <project
+            class="org.csstudio.startup.module.defaults.DefaultProject">
+      </project>
    </extension>
    <extension
          id="product"
@@ -106,6 +106,16 @@
             file="toc.xml"
             primary="true">
       </toc>
+   </extension>
+   <extension
+         point="org.eclipse.ui.menus">
+      <menuContribution
+            allPopups="true"
+            locationURI="toolbar:org.eclipse.ui.main.toolbar?after=file">
+         <toolbar
+               id="additions">
+         </toolbar>
+      </menuContribution>
    </extension>
    
 </plugin>

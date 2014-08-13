@@ -27,7 +27,8 @@ import org.csstudio.opibuilder.properties.IWidgetPropertyChangeHandler;
 import org.csstudio.opibuilder.util.ResourceUtil;
 import org.csstudio.opibuilder.widgets.model.ImageModel;
 import org.csstudio.swt.widgets.figures.ImageFigure;
-import org.csstudio.swt.widgets.util.PermutationMatrix;
+import org.csstudio.swt.widgets.symbol.util.PermutationMatrix;
+import org.csstudio.swt.widgets.util.IImageLoadedListener;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.draw2d.IFigure;
 import org.eclipse.draw2d.geometry.Dimension;
@@ -62,6 +63,17 @@ public final class ImageEditPart extends AbstractWidgetEditPart {
 		ImageModel model = getWidgetModel();
 		// create AND initialize the view properly
 		final ImageFigure figure = new ImageFigure();		
+
+		// Resize when new image is loaded
+		figure.setImageLoadedListener(new IImageLoadedListener() {
+
+			@Override
+			public void imageLoaded(IFigure figure) {
+				ImageFigure imageFigure = (ImageFigure) figure;
+				autoSizeWidget(imageFigure);
+			}
+		});
+
 		figure.setFilePath(model.getFilename());		
 		figure.setStretch(model.getStretch());
 		figure.setAutoSize(model.isAutoSize());
@@ -71,6 +83,7 @@ public final class ImageEditPart extends AbstractWidgetEditPart {
 		figure.setLeftCrop(model.getLeftCrop());
 		figure.setRightCrop(model.getRightCrop());
 		figure.setPermutationMatrix(model.getPermutationMatrix());
+		figure.setAlignedToNearestSecond(model.isAlignedToNearestSecond());
 		return figure;
 	}
 	
@@ -194,7 +207,18 @@ public final class ImageEditPart extends AbstractWidgetEditPart {
 			}
 		};
 		setPropertyChangeHandler(ImageModel.PROP_NO_ANIMATION, handle);
-		
+
+		// changes to the align to nearest second property
+		handle = new IWidgetPropertyChangeHandler() {
+			public boolean handleChange(final Object oldValue,
+					final Object newValue, final IFigure figure) {
+				ImageFigure imageFigure = (ImageFigure) figure;
+				imageFigure.setAlignedToNearestSecond((Boolean) newValue);
+				return false;
+			}
+		};
+		setPropertyChangeHandler(ImageModel.PROP_ALIGN_TO_NEAREST_SECOND, handle);
+
 		// changes to the border width property
 		handle = new IWidgetPropertyChangeHandler() {
 			public boolean handleChange(final Object oldValue, final Object newValue,

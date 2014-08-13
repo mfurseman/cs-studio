@@ -1,7 +1,9 @@
 package org.csstudio.security.ui.internal;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import javax.security.auth.Subject;
 
@@ -28,6 +30,7 @@ public class SecurityVariables extends AbstractSourceProvider implements Securit
 {
     final public static String AUTHENTICATED = "org.csstudio.security.ui.authenticated";
     final public static String CURRENT_USER = "org.csstudio.security.ui.current_user";
+    final public static String CURRENT_AUTHORIZATION = "org.csstudio.security.ui.current_authorization";
     
     final private Map<String, Object> variables = new HashMap<>();
 
@@ -36,7 +39,8 @@ public class SecurityVariables extends AbstractSourceProvider implements Securit
     {
         final Boolean authenticated = SecuritySupport.getSubject() != null;
         variables.put(AUTHENTICATED, authenticated);
-        variables.put(CURRENT_USER, SecuritySupport.isCurrentUser());
+        variables.put(CURRENT_USER, SecuritySupport.isCurrentUser());        
+        variables.put(CURRENT_AUTHORIZATION, SecuritySupport.getAuthorizations().getAuthorizations());
         SecuritySupport.addListener(this);
     }
 
@@ -71,7 +75,13 @@ public class SecurityVariables extends AbstractSourceProvider implements Securit
         final Boolean authenticated = subject != null;
         variables.put(AUTHENTICATED, authenticated);
         variables.put(CURRENT_USER, is_current_user);
+        final Set<String> auth = authorizations != null
+                ? authorizations.getAuthorizations()
+                : Collections.<String>emptySet();
+        variables.put(CURRENT_AUTHORIZATION, auth);
+        
         fireSourceChanged(ISources.WORKBENCH, AUTHENTICATED, authenticated);
         fireSourceChanged(ISources.WORKBENCH, CURRENT_USER, is_current_user);
+        fireSourceChanged(ISources.WORKBENCH, CURRENT_AUTHORIZATION, auth);
     }
 }

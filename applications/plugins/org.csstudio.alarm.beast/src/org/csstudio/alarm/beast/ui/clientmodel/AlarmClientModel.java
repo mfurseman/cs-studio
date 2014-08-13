@@ -126,10 +126,9 @@ public class AlarmClientModel
     final private boolean allow_write = ! Preferences.isReadOnly();
 
 	/** Initialize client model */
-    private AlarmClientModel() throws Exception
-    {
-    	config_name = Preferences.getAlarmTreeRoot();
-
+	private AlarmClientModel(String config_name) throws Exception 
+	{
+		this.config_name = config_name;
         // Initial dummy alarm info
         createPseudoAlarmTree(Messages.AlarmClientModel_NotInitialized);
 
@@ -140,21 +139,36 @@ public class AlarmClientModel
      *  <p>
      *  Increments the reference count.
      *  @see #release()
+     *  @param config_name Name of alarm tree root, raise an Exception if null
      *  @return Alarm client model instance
      *  @throws Exception on error
      */
-    public static AlarmClientModel getInstance() throws Exception
+    public static AlarmClientModel getInstance(String config_name) throws Exception
     {
+    	if(config_name == null)
+    		throw new Exception("Configuration name can't be null");
         synchronized (AlarmClientModel.class)
         {
             if (instance == null)
-                instance = new AlarmClientModel();
+                instance = new AlarmClientModel(config_name);
         }
         instance.references.incrementAndGet();
         return instance;
-    }
+	}
 
-    /** Release the 'instance' */
+    /** Obtain the shared instance.
+     *  <p>
+     *  Increments the reference count.
+     *  @see #release()
+     *  @return Alarm client model instance
+     *  @throws Exception on error
+     */
+	public static AlarmClientModel getInstance() throws Exception 
+	{
+		return getInstance(Preferences.getAlarmTreeRoot());
+	}
+
+	/** Release the 'instance' */
     private static void releaseInstance()
     {
         synchronized (AlarmClientModel.class)
@@ -253,6 +267,7 @@ public class AlarmClientModel
 		    	communicator = null;
 	    	}
         }
+    	server_alive = false;
 
         // Load new configuration:
         // Create new JMS communicator, read from RDB, fire events, ...
@@ -821,16 +836,9 @@ public class AlarmClientModel
             new ReadConfigJob(this).schedule();
             return;
         }
+
         // Update a known PV
         final AlarmTreePV pv = (AlarmTreePV) item;
-        
-        // Remember state
-        final SeverityLevel severity = pv.getSeverity();
-        final SeverityLevel current_severity = pv.getCurrentSeverity();
-        final String message = pv.getMessage();
-        final String current_message = pv.getCurrentMessage();
-        final boolean enabled = pv.isEnabled();
-        
         synchronized (this)
         {
             if (config == null)
@@ -850,13 +858,15 @@ public class AlarmClientModel
         if (parent != null)
             parent.maximizeSeverity();
 
-        // Change in alarm state as result of config update?
-        if (severity.equals(pv.getSeverity()) &&
-        	current_severity.equals(pv.getCurrentSeverity()) &&
-        	message.equals(pv.getMessage()) &&
-        	current_message.equals(pv.getCurrentMessage()) &&
-        	enabled == pv.isEnabled())
-        	return;
+        // Note that this may actually be a new PV that this instance
+        // of the client GUI has just added.
+        // We know the PV in the config tree, but it's not visible
+        // in the GUI, yet, because we just added it.
+        // Previously, there was code here that tried to optimize display
+        // updates by suppressing the display update if the PV
+        // has not changed alarm state
+        // -> Always update PVs with changed configuration
+        
         // Update alarm display
         fireNewAlarmState(pv, true);
     }

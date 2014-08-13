@@ -15,7 +15,9 @@ import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
+import org.eclipse.ui.IViewPart;
 import org.eclipse.ui.IWorkbenchPage;
+import org.eclipse.ui.IWorkbenchPartSite;
 
 /** Helper for accessing UI.
  * 
@@ -153,4 +155,34 @@ public class UIHelper
         
         return null;
     }
+	
+	/**Popup login dialog to authenticate user with the registered login module. 
+	 * This method must be called in UI thread.
+	 * @param display display of the session.
+	 * @param retry the allowed number of retries.
+	 * @return true if login successfully.
+	 */
+	public boolean rapAuthenticate(Display display){		
+		return false;		
+	}		
+	
+	/**Check if current RAP session is logged in.
+	 * @param display
+	 * @return
+	 */
+	public boolean rapIsLoggedIn(Display display){		
+		return false;
+	}
+
+	/** @param site Site on which to enable/disable closing
+	 *  @param enable_close Enable the close button, allow closing the part?
+	 */
+	public void enableClose(IWorkbenchPartSite site, boolean enable_close) {
+		// By default, this is not supported
+	}
+	
+	/** @param view View to 'detach' */
+	public void detachView(IViewPart view) {
+		// By default, this is not supported
+	}
 }
